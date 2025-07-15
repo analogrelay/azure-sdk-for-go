@@ -1,5 +1,13 @@
 # Release History
 
+## 1.4.2-beta.1 (2025-07-08)
+
+### Bugs Fixed
+* Fix panic in File and Directory client DownloadStream and Get Properties on authentication failure.
+
+### Other Changes
+* Updated `azidentity` version to `1.10.1`
+
 ## 1.4.1 (2025-04-28)
 
 ### Other Changes
