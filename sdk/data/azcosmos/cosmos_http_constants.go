@@ -37,6 +37,7 @@ const (
 	cosmosHeaderIsBatchOrdered                     string = "x-ms-cosmos-batch-ordered"
 	cosmosHeaderSDKSupportedCapabilities           string = "x-ms-cosmos-sdk-supportedcapabilities"
 	cosmosHeaderEnableCrossPartitionQuery          string = "x-ms-documentdb-query-enablecrosspartition"
+	cosmosHeaderAllowTentativeWrites               string = "x-ms-cosmos-allow-tentative-writes"
 	cosmosHeaderIsQueryPlanRequest                 string = "x-ms-cosmos-is-query-plan-request"
 	cosmosHeaderSupportedQueryFeatures             string = "x-ms-cosmos-supported-query-features"
 	cosmosHeaderPartitionKeyRangeId                string = "x-ms-documentdb-partitionkeyrangeid"

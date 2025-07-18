@@ -75,6 +75,68 @@ func TestNewClientFromConnStrSuccess(t *testing.T) {
 	}
 }
 
+func TestNewClientWithUseMultipleWriteLocationsNil(t *testing.T) {
+	connStr := "AccountEndpoint=http://127.0.0.1:80;AccountKey=dG9fYmFzZV82NA==;"
+	options := &ClientOptions{
+		ConnectionPolicy: ConnectionPolicy{
+			UseMultipleWriteLocations: nil, // Should default to true behavior
+		},
+	}
+
+	client, err := NewClientFromConnectionString(connStr, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actualEnpoint := client.endpoint
+	expectedEndpoint := "http://127.0.0.1:80"
+	if actualEnpoint != expectedEndpoint {
+		t.Errorf("Expected %v, but got %v", expectedEndpoint, actualEnpoint)
+	}
+}
+
+func TestNewClientWithUseMultipleWriteLocationsTrue(t *testing.T) {
+	connStr := "AccountEndpoint=http://127.0.0.1:80;AccountKey=dG9fYmFzZV82NA==;"
+	useMultipleWrites := true
+	options := &ClientOptions{
+		ConnectionPolicy: ConnectionPolicy{
+			UseMultipleWriteLocations: &useMultipleWrites,
+		},
+	}
+
+	client, err := NewClientFromConnectionString(connStr, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actualEnpoint := client.endpoint
+	expectedEndpoint := "http://127.0.0.1:80"
+	if actualEnpoint != expectedEndpoint {
+		t.Errorf("Expected %v, but got %v", expectedEndpoint, actualEnpoint)
+	}
+}
+
+func TestNewClientWithUseMultipleWriteLocationsFalse(t *testing.T) {
+	connStr := "AccountEndpoint=http://127.0.0.1:80;AccountKey=dG9fYmFzZV82NA==;"
+	useMultipleWrites := false
+	options := &ClientOptions{
+		ConnectionPolicy: ConnectionPolicy{
+			UseMultipleWriteLocations: &useMultipleWrites,
+		},
+	}
+
+	client, err := NewClientFromConnectionString(connStr, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actualEnpoint := client.endpoint
+	expectedEndpoint := "http://127.0.0.1:80"
+	if actualEnpoint != expectedEndpoint {
+		t.Errorf("Expected %v, but got %v", expectedEndpoint, actualEnpoint)
+	}
+}
+
 func TestEnsureErrorIsGeneratedOnResponse(t *testing.T) {
 	someError := map[string]string{"Code": "SomeCode"}
 

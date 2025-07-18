@@ -12,6 +12,7 @@ import (
 
 type headerPolicies struct {
 	enableContentResponseOnWrite bool
+	useMultipleWriteLocations    bool
 }
 
 type headerOptionsOverride struct {
@@ -45,6 +46,11 @@ func (p *headerPolicies) Do(req *policy.Request) (*http.Response, error) {
 
 		if o.isWriteOperation && o.resourceType == resourceTypeDocument && !enableContentResponseOnWrite {
 			req.Raw().Header.Add(cosmosHeaderPrefer, cosmosHeaderValuesPreferMinimal)
+		}
+
+		// Add tentative writes header for document operations when multiple write locations are enabled
+		if p.useMultipleWriteLocations && o.resourceType == resourceTypeDocument {
+			req.Raw().Header.Add(cosmosHeaderAllowTentativeWrites, "true")
 		}
 	}
 

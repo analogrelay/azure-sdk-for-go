@@ -254,16 +254,134 @@ func TestAddCorrelatedActivityIdHeader(t *testing.T) {
 	}
 }
 
+func TestAddTentativeWritesHeaderWhenEnabled(t *testing.T) {
+	headerPolicy := &headerPolicies{
+		useMultipleWriteLocations: true,
+	}
+	srv, close := mock.NewTLSServer()
+	defer close()
+	srv.SetResponse(mock.WithStatusCode(http.StatusOK))
+
+	verifier := headerPoliciesVerify{}
+	pl := azruntime.NewPipeline("azcosmostest", "v1.0.0", azruntime.PipelineOptions{PerCall: []policy.Policy{headerPolicy, &verifier}}, &policy.ClientOptions{Transport: srv})
+	req, err := azruntime.NewRequest(context.Background(), http.MethodGet, srv.URL())
+	req.SetOperationValue(pipelineRequestOptions{
+		resourceType: resourceTypeDocument,
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	_, err = pl.Do(req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !verifier.isTentativeWritesHeaderSet {
+		t.Fatalf("expected tentative writes header to be set when useMultipleWriteLocations is true")
+	}
+}
+
+func TestNoTentativeWritesHeaderWhenDisabled(t *testing.T) {
+	headerPolicy := &headerPolicies{
+		useMultipleWriteLocations: false,
+	}
+	srv, close := mock.NewTLSServer()
+	defer close()
+	srv.SetResponse(mock.WithStatusCode(http.StatusOK))
+
+	verifier := headerPoliciesVerify{}
+	pl := azruntime.NewPipeline("azcosmostest", "v1.0.0", azruntime.PipelineOptions{PerCall: []policy.Policy{headerPolicy, &verifier}}, &policy.ClientOptions{Transport: srv})
+	req, err := azruntime.NewRequest(context.Background(), http.MethodGet, srv.URL())
+	req.SetOperationValue(pipelineRequestOptions{
+		resourceType: resourceTypeDocument,
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	_, err = pl.Do(req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if verifier.isTentativeWritesHeaderSet {
+		t.Fatalf("expected tentative writes header not to be set when useMultipleWriteLocations is false")
+	}
+}
+
+func TestNoTentativeWritesHeaderForNonDocumentOperations(t *testing.T) {
+	headerPolicy := &headerPolicies{
+		useMultipleWriteLocations: true,
+	}
+	srv, close := mock.NewTLSServer()
+	defer close()
+	srv.SetResponse(mock.WithStatusCode(http.StatusOK))
+
+	verifier := headerPoliciesVerify{}
+	pl := azruntime.NewPipeline("azcosmostest", "v1.0.0", azruntime.PipelineOptions{PerCall: []policy.Policy{headerPolicy, &verifier}}, &policy.ClientOptions{Transport: srv})
+	req, err := azruntime.NewRequest(context.Background(), http.MethodGet, srv.URL())
+	req.SetOperationValue(pipelineRequestOptions{
+		resourceType: resourceTypeCollection, // Non-document operation
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	_, err = pl.Do(req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if verifier.isTentativeWritesHeaderSet {
+		t.Fatalf("expected tentative writes header not to be set for non-document operations")
+	}
+}
+
+func TestTentativeWritesHeaderDefaultBehavior(t *testing.T) {
+	headerPolicy := &headerPolicies{
+		// useMultipleWriteLocations not set - should default to false in test
+	}
+	srv, close := mock.NewTLSServer()
+	defer close()
+	srv.SetResponse(mock.WithStatusCode(http.StatusOK))
+
+	verifier := headerPoliciesVerify{}
+	pl := azruntime.NewPipeline("azcosmostest", "v1.0.0", azruntime.PipelineOptions{PerCall: []policy.Policy{headerPolicy, &verifier}}, &policy.ClientOptions{Transport: srv})
+	req, err := azruntime.NewRequest(context.Background(), http.MethodGet, srv.URL())
+	req.SetOperationValue(pipelineRequestOptions{
+		resourceType: resourceTypeDocument,
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	_, err = pl.Do(req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if verifier.isTentativeWritesHeaderSet {
+		t.Fatalf("expected tentative writes header not to be set when useMultipleWriteLocations defaults to false")
+	}
+}
+
 type headerPoliciesVerify struct {
 	isEnableContentResponseOnWriteHeaderSet bool
 	isPartitionKeyHeaderSet                 string
 	isCorrelatedActivityIdSet               string
+	isTentativeWritesHeaderSet              bool
 }
 
 func (p *headerPoliciesVerify) Do(req *policy.Request) (*http.Response, error) {
 	p.isEnableContentResponseOnWriteHeaderSet = req.Raw().Header.Get(cosmosHeaderPrefer) != ""
 	p.isPartitionKeyHeaderSet = req.Raw().Header.Get(cosmosHeaderPartitionKey)
 	p.isCorrelatedActivityIdSet = req.Raw().Header.Get(cosmosHeaderCorrelatedActivityId)
+	p.isTentativeWritesHeaderSet = req.Raw().Header.Get(cosmosHeaderAllowTentativeWrites) == "true"
 
 	return req.Next()
 }

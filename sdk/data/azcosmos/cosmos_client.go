@@ -136,12 +136,20 @@ func newClient(authPolicy policy.Policy, gem *globalEndpointManager, options *Cl
 	if options == nil {
 		options = &ClientOptions{}
 	}
+	
+	// Determine the UseMultipleWriteLocations setting - default is true
+	useMultipleWriteLocations := true
+	if options.ConnectionPolicy.UseMultipleWriteLocations != nil {
+		useMultipleWriteLocations = *options.ConnectionPolicy.UseMultipleWriteLocations
+	}
+	
 	return azcore.NewClient(moduleName, serviceLibVersion,
 		azruntime.PipelineOptions{
 			AllowedHeaders: getAllowedHeaders(),
 			PerCall: []policy.Policy{
 				&headerPolicies{
 					enableContentResponseOnWrite: options.EnableContentResponseOnWrite,
+					useMultipleWriteLocations:    useMultipleWriteLocations,
 				},
 				&globalEndpointManagerPolicy{gem: gem},
 			},
@@ -575,6 +583,7 @@ func getAllowedHeaders() []string {
 		cosmosHeaderIsBatchAtomic,
 		cosmosHeaderIsBatchOrdered,
 		cosmosHeaderSDKSupportedCapabilities,
+		cosmosHeaderAllowTentativeWrites,
 		headerXmsDate,
 		headerContentType,
 		headerIfMatch,
